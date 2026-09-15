@@ -1,17 +1,86 @@
 package org.kumoc;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main {
-    static void main() {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        IO.println(String.format("Hello and welcome!"));
+import org.kumoc.database.DatabaseManager;
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            IO.println("i = " + i);
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+
+public class Main {
+
+    public static void main(String[] args) {
+
+        try (Connection connection = DatabaseManager.initialize()) {
+
+            System.out.println(
+                    "Conectado correctamente."
+            );
+
+            insertarPersona(
+                    connection,
+                    "Matias",
+                    30
+            );
+
+            mostrarPersonas(connection);
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+        }
+    }
+
+
+    private static void insertarPersona(Connection connection, String nombre, int edad) throws Exception {
+
+        String sql =
+                "INSERT INTO PERSONAS(nombre, edad) VALUES (?, ?)";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, nombre);
+            statement.setInt(2, edad);
+
+            statement.executeUpdate();
+        }
+
+        System.out.println(
+                "Persona guardada."
+        );
+    }
+
+
+    private static void mostrarPersonas(Connection connection) throws Exception {
+
+        String sql =
+                "SELECT * FROM PERSONAS";
+
+        try (Statement statement =
+                     connection.createStatement();
+
+             ResultSet resultSet = statement.executeQuery(sql)) {
+
+            System.out.println();
+            System.out.println("PERSONAS:");
+
+            while (resultSet.next()) {
+
+                int id =
+                        resultSet.getInt("id");
+
+                String nombre =
+                        resultSet.getString("nombre");
+
+                int edad =
+                        resultSet.getInt("edad");
+
+                System.out.println(
+                        id + " | "
+                                + nombre + " | "
+                                + edad
+                );
+            }
         }
     }
 }
