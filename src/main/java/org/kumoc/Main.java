@@ -13,17 +13,11 @@ public class Main {
 
         try (Connection connection = DatabaseManager.initialize()) {
 
-            System.out.println(
-                    "Conectado correctamente."
-            );
+            System.out.println("Conectado correctamente.");
 
-            insertarPersona(
-                    connection,
-                    "Matias",
-                    30
-            );
+            //insertarPersona(connection, "Matias", 30);
 
-            mostrarPersonas(connection);
+            //mostrarPersonas(connection);
 
         } catch (Exception e) {
 

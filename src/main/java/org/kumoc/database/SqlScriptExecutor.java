@@ -19,13 +19,32 @@ public class SqlScriptExecutor {
         }
 
         try (inputStream) {
+            //Convierte el SQL en STRING
             sql = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         }
 
+        //Arreglo de Sentencias a Ejecutar
+        String[] sentencias = sql.split(";");
+
         try (Statement statement = connection.createStatement()) {
 
-            //Ejecuta el .sql
-            statement.execute(sql);
+            for (String sentencia : sentencias) {
+
+                sentencia = sentencia.trim();
+
+                if (!sentencia.isEmpty()) {
+
+                    logExecute(sentencia);
+
+                    statement.execute(sentencia);
+                }
+            }
         }
+    }
+
+    private static void logExecute(String sentencia) {
+
+        System.out.println("Ejecutando: " +
+                sentencia.substring(0, Math.min(50, sentencia.length())));
     }
 }

@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class DatabaseManager {
 
@@ -14,20 +15,15 @@ public class DatabaseManager {
         //Crea los Paths
         AppPaths.crearDirectorios();
 
-
         boolean databaseExists = Files.exists(AppPaths.getDatabasePath());
 
         //Si el archivo no existe lo crea pero vacio, por eso el if siguiente
         Connection connection = ConnectionFactory.getConnection();
 
+
+        //Si no existe ejecuta la creacion de las tablas
         if (!databaseExists) {
-            System.out.println("Base de datos nueva. Ejecutando SQL...");
-
             CrearDataBase.execute(connection);
-
-        } else {
-
-            System.out.println("Base de datos existente.");
         }
 
         return connection;

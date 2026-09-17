@@ -14,9 +14,5 @@ public class CrearDataBase {
         //-------INDEX
         SqlScriptExecutor.execute(connection,"/db/indexes.sql");
 
-        //-------TRIGGERS
-        SqlScriptExecutor.execute(connection,"/db/triggers_stock.sql");
-        SqlScriptExecutor.execute(connection,"/db/triggers_facturas.sql");
-
     }
 }
