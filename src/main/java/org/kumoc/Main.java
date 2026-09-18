@@ -44,7 +44,6 @@ public class Main {
         );
     }
 
-
     private static void mostrarPersonas(Connection connection) throws Exception {
 
         String sql =
