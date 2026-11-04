@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" spacing="12"
+      fx:controller="org.kumoc.controller.StockController">
+    <padding>
+        <Insets top="24" right="24" bottom="24" left="24"/>
+    </padding>
+
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Label text="STOCK" styleClass="titulo-seccion"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <TextField fx:id="txtBuscar" promptText="Buscar por código, nombre, talle o color" prefWidth="300"/>
+    </HBox>
+
+    <HBox fx:id="bannerAlerta" styleClass="banner-alerta">
+        <Label fx:id="lblAlerta"/>
+    </HBox>
+
+    <HBox spacing="16" VBox.vgrow="ALWAYS">
+        <VBox spacing="8" HBox.hgrow="ALWAYS">
+            <TableView fx:id="tabla" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colCodigo" text="CÓDIGO" prefWidth="90"/>
+                    <TableColumn fx:id="colProducto" text="PRODUCTO" prefWidth="190"/>
+                    <TableColumn fx:id="colFisico" text="FÍSICO" prefWidth="75" style="-fx-alignment: CENTER-RIGHT;"/>
+                    <TableColumn fx:id="colComprometido" text="CONGELADO" prefWidth="105"
+                                 style="-fx-alignment: CENTER-RIGHT;"/>
+                    <TableColumn fx:id="colDisponible" text="DISPONIBLE" prefWidth="105"
+                                 style="-fx-alignment: CENTER-RIGHT;"/>
+                    <TableColumn fx:id="colMinimo" text="MÍNIMO" prefWidth="80" style="-fx-alignment: CENTER-RIGHT;"/>
+                </columns>
+            </TableView>
+            <Label text="Físico: suma de movimientos. Congelado: comprometido por órdenes de trabajo abiertas. Disponible = físico − congelado."
+                   styleClass="texto-suave" wrapText="true"/>
+        </VBox>
+
+        <VBox styleClass="tarjeta" spacing="10" prefWidth="430" minWidth="430" maxWidth="430">
+            <Label fx:id="lblHistorial" text="HISTORIAL DE MOVIMIENTOS" styleClass="subtitulo"/>
+            <HBox spacing="10">
+                <Button fx:id="btnIngreso" text="Registrar ingreso" styleClass="boton-primario" onAction="#ingreso"/>
+                <Button fx:id="btnAjuste" text="Registrar ajuste" styleClass="boton-secundario" onAction="#ajuste"/>
+            </HBox>
+            <TableView fx:id="tablaMovimientos" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colMovFecha" text="FECHA" prefWidth="140"/>
+                    <TableColumn fx:id="colMovTipo" text="TIPO" prefWidth="70"/>
+                    <TableColumn fx:id="colMovCantidad" text="CANT." prefWidth="55"
+                                 style="-fx-alignment: CENTER-RIGHT;"/>
+                    <TableColumn fx:id="colMovMotivo" text="MOTIVO" prefWidth="135"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </HBox>
+</VBox>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" styleClass="contenido" spacing="12"
+      prefWidth="400" fx:controller="org.kumoc.controller.MovimientoDialogController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label fx:id="lblTitulo" styleClass="subtitulo"/>
+    <Label fx:id="lblAyuda" styleClass="texto-suave" wrapText="true"/>
+
+    <VBox fx:id="boxProducto" spacing="3">
+        <Label text="PRODUCTO *" styleClass="etiqueta-campo"/>
+        <ComboBox fx:id="cmbProducto" maxWidth="Infinity"/>
+    </VBox>
+    <VBox spacing="3">
+        <Label fx:id="lblCantidad" text="CANTIDAD *" styleClass="etiqueta-campo"/>
+        <TextField fx:id="txtCantidad"/>
+    </VBox>
+    <VBox fx:id="boxMotivo" spacing="3">
+        <Label text="MOTIVO *" styleClass="etiqueta-campo"/>
+        <TextField fx:id="txtMotivo"/>
+    </VBox>
+
+    <Region prefHeight="4"/>
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Cancelar" styleClass="boton-secundario" cancelButton="true" onAction="#cancelar"/>
+        <Button text="Aceptar" styleClass="boton-primario" defaultButton="true" onAction="#aceptar"/>
+    </HBox>
+</VBox>

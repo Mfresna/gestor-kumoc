@@ -7,6 +7,7 @@ El software es una aplicación de escritorio monousuario para **control de stock
 
 ### Productos
 - **RF-01** ABM de productos vendibles: nombre, descripción, talle, color, precio y stock mínimo. La baja es lógica (`activo`).
+- **RF-18** Cada producto puede tener una imagen, que se guarda comprimida en `%APPDATA%\Kumoc\imagenes` y se muestra en el formulario y en la lista de productos.
 
 ### Clientes
 - **RF-02** ABM de clientes: nombre/razón social, CUIT/CUIL, tipo de factura (A, B, C, X) y teléfono de contacto. Información mínima.

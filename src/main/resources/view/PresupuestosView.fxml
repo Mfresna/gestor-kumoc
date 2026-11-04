@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" spacing="12"
+      fx:controller="org.kumoc.controller.PresupuestosController">
+    <padding>
+        <Insets top="24" right="24" bottom="24" left="24"/>
+    </padding>
+
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Label text="PRESUPUESTOS" styleClass="titulo-seccion"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <ComboBox fx:id="cmbEstado" prefWidth="240"/>
+        <Button text="Nuevo presupuesto" styleClass="boton-primario" onAction="#nuevo"/>
+    </HBox>
+
+    <TableView fx:id="tabla" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colNumero" text="N°" prefWidth="70"/>
+            <TableColumn fx:id="colFecha" text="FECHA" prefWidth="110"/>
+            <TableColumn fx:id="colCliente" text="CLIENTE" prefWidth="280"/>
+            <TableColumn fx:id="colItems" text="ÍTEMS" prefWidth="70" style="-fx-alignment: CENTER-RIGHT;"/>
+            <TableColumn fx:id="colTotal" text="TOTAL" prefWidth="140" style="-fx-alignment: CENTER-RIGHT;"/>
+            <TableColumn fx:id="colEstado" text="ESTADO" prefWidth="120"/>
+        </columns>
+    </TableView>
+
+    <HBox spacing="16">
+        <VBox styleClass="tarjeta" spacing="8" HBox.hgrow="ALWAYS">
+            <Label fx:id="lblDetalle" text="DETALLE" styleClass="subtitulo"/>
+            <TableView fx:id="tablaItems" prefHeight="170">
+                <columns>
+                    <TableColumn fx:id="colItemProducto" text="PRODUCTO" prefWidth="320"/>
+                    <TableColumn fx:id="colItemCantidad" text="CANT." prefWidth="70"
+                                 style="-fx-alignment: CENTER-RIGHT;"/>
+                    <TableColumn fx:id="colItemPrecio" text="PRECIO UNIT." prefWidth="130"
+                                 style="-fx-alignment: CENTER-RIGHT;"/>
+                    <TableColumn fx:id="colItemSubtotal" text="SUBTOTAL" prefWidth="130"
+                                 style="-fx-alignment: CENTER-RIGHT;"/>
+                </columns>
+            </TableView>
+        </VBox>
+
+        <VBox styleClass="tarjeta" spacing="10" prefWidth="260" minWidth="260">
+            <Label text="ACCIONES" styleClass="subtitulo"/>
+            <Button fx:id="btnEditar" text="Editar" styleClass="boton-secundario" maxWidth="Infinity"
+                    onAction="#editar"/>
+            <Button fx:id="btnAprobar" text="Aprobar como orden" styleClass="boton-primario"
+                    maxWidth="Infinity" onAction="#aprobar"/>
+            <Button fx:id="btnRechazar" text="Rechazar" styleClass="boton-secundario" maxWidth="Infinity"
+                    onAction="#rechazar"/>
+            <Button fx:id="btnEliminar" text="Eliminar" styleClass="boton-secundario" maxWidth="Infinity"
+                    onAction="#eliminar"/>
+        </VBox>
+    </HBox>
+</VBox>

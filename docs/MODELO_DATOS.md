@@ -1,6 +1,6 @@
 # MODELO DE DATOS – KUMOC
 
-Motor: SQLite. Cinco entidades principales. Los nombres de columnas parten de `src/main/resources/db/schema.sql` y los marcados con **(nuevo)** o **(cambia)** requieren modificar ese esquema (pendiente de aprobación, ver `DECISIONES_TECNICAS.md`).
+Motor: SQLite. Cinco entidades principales. El esquema vigente está en `src/main/resources/db/schema.sql` (tablas) y `db/indexes.sql` (índices). Solo se crea si la base no existe; un cambio de esquema exige borrar `%APPDATA%\Kumoc\kumoc.db` (o migrar).
 
 ## CLIENTES
 Clientes a los que se presupuesta y vende, con información mínima.
@@ -10,9 +10,9 @@ Clientes a los que se presupuesta y vende, con información mínima.
 | id_cliente | INTEGER PK | autoincremental |
 | razon_social | TEXT NOT NULL | nombre |
 | cuit | TEXT NOT NULL UNIQUE | CUIT/CUIL |
-| tipo_factura | TEXT NOT NULL | `A`, `B`, `C`, `X` **(nuevo)** |
+| tipo_factura | TEXT NOT NULL | `A`, `B`, `C`, `X` |
 | telefono | TEXT | contacto |
-| email, direccion | TEXT | ya existen en el esquema actual; opcionales |
+| email, direccion | TEXT | opcionales |
 
 ## PRODUCTOS
 Productos vendibles (chalecos, camperas, buzos, etc.).
@@ -31,7 +31,7 @@ Productos vendibles (chalecos, camperas, buzos, etc.).
 | imagen | TEXT | ruta en `%APPDATA%\Kumoc\imagenes` |
 | ult_actualizacion | TEXT | |
 
-**(cambia)** Se eliminan `stock_fisico` y `stock_comprometido`: el stock se deriva de `MOVIMIENTO_STOCK`.
+`PRODUCTOS` no guarda stock: se deriva de `MOVIMIENTO_STOCK` (ver "Cálculo de stock").
 
 ## PRESUPUESTO
 Cabecera del documento. Cubre todo el ciclo mediante `estado`.
@@ -42,10 +42,10 @@ Cabecera del documento. Cubre todo el ciclo mediante `estado`.
 | id_cliente | INTEGER FK → CLIENTES | |
 | fecha_emision | TEXT | |
 | total | REAL ≥ 0 | suma de subtotales |
-| estado | TEXT | **(cambia)** `PRESUPUESTO`, `RECHAZADO`, `ORDEN_TRABAJO`, `VENTA` (hoy el esquema tiene `FACTURADO`) |
-| fecha_cobro | TEXT | **(nuevo)** NULL = pendiente de pago; se completa al registrar el pago |
-| facturar_arca | INTEGER 1/0 | **(nuevo)** se define al registrar el pago |
-| fecha_facturacion_arca | TEXT | **(nuevo)** NULL = pendiente de facturar en ARCA |
+| estado | TEXT | `PRESUPUESTO`, `RECHAZADO`, `ORDEN_TRABAJO`, `VENTA` |
+| fecha_cobro | TEXT | NULL = pendiente de pago; se completa al registrar el pago |
+| facturar_arca | INTEGER 1/0 | se define al registrar el pago |
+| fecha_facturacion_arca | TEXT | NULL = pendiente de facturar en ARCA |
 
 El pago y la facturación son ejes independientes del `estado`.
 
@@ -58,10 +58,10 @@ Detalle de ítems de cada presupuesto.
 | id_presupuesto | INTEGER FK | |
 | id_producto | INTEGER FK | |
 | cantidad | INTEGER > 0 | |
-| precio_unitario | REAL | precio vigente al presupuestar |
-| subtotal | REAL | = cantidad × precio_unitario |
+| precio_unitario | REAL > 0 | precio vigente al presupuestar |
+| subtotal | REAL > 0 | = cantidad × precio_unitario; lo calcula el servicio (2 decimales) |
 
-## MOVIMIENTO_STOCK **(nuevo en db/schema.sql)**
+## MOVIMIENTO_STOCK
 Histórico inmutable de eventos de inventario.
 
 | Campo | Tipo | Notas |
@@ -90,4 +90,4 @@ Todo se calcula con consulta; nada se guarda. Alerta de stock bajo cuando el sto
 `PRESUPUESTO` → (aprobado) `ORDEN_TRABAJO` → (faltantes cubiertos, se generan los EGRESO) `VENTA`. `RECHAZADO` desde `PRESUPUESTO`. El cobro y la facturación ARCA se registran aparte.
 
 ## Pendiente
-Regla exacta de la transición `ORDEN_TRABAJO → VENTA`. Ver `DECISIONES_TECNICAS.md`.
+Confirmar la regla de la transición `ORDEN_TRABAJO → VENTA`. Ver `DECISIONES_TECNICAS.md`.
