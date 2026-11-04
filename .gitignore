@@ -13,11 +13,6 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# Gradle (por si migrás en el futuro)
-.gradle/
-build/
-!gradle/wrapper/gradle-wrapper.jar
-
 # Base de datos SQLite (datos locales, no versionar)
 *.db
 *.sqlite
@@ -39,6 +34,10 @@ logs/
 .classpath
 .project
 *.launch
+nbproject/
+nbbuild/
+dist/
+*.swp
 
 # Archivos generados por JavaFX / empaquetado
 *.jar
@@ -46,10 +45,6 @@ logs/
 /out/
 *.exe
 *.dmg
-
-# Archivos de PDF generados por la app (presupuestos exportados)
-/presupuestos/*.pdf
-/output/
 
 # Sistema operativo
 .DS_Store
