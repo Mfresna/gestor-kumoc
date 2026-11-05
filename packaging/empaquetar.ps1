@@ -7,9 +7,15 @@
   Uso (desde la raiz del proyecto):
       powershell -ExecutionPolicy Bypass -File packaging\empaquetar.ps1
       powershell -ExecutionPolicy Bypass -File packaging\empaquetar.ps1 -Version 1.1.0
+
+  Con -Instalador genera ademas dist\KUMOC-<version>-setup.exe (instala en C:\Program Files\KUMOC,
+  con acceso directo en el escritorio y el menu Inicio). Requiere WiX Toolset 3.x:
+      winget install WiXToolset.WiXToolset      (en una terminal de administrador)
+      powershell -ExecutionPolicy Bypass -File packaging\empaquetar.ps1 -Instalador
 #>
 param(
-    [string]$Version = "1.0.0"
+    [string]$Version = "1.0.0",
+    [switch]$Instalador
 )
 
 $ErrorActionPreference = "Stop"
@@ -70,4 +76,38 @@ Compress-Archive -Path (Join-Path $salida $nombre) -DestinationPath $zip
 $mb = [math]::Round((Get-Item $zip).Length / 1MB, 1)
 Write-Host ""
 Write-Host "Listo: $zip ($mb MB)"
+
+if ($Instalador) {
+    # Requiere WiX Toolset 3.x (candle.exe y light.exe en el PATH): winget install WiXToolset.WiXToolset
+    if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
+        throw "Para generar el instalador hace falta WiX Toolset 3.x (candle.exe en el PATH). Instalalo con: winget install WiXToolset.WiXToolset (como administrador) y abri una terminal nueva."
+    }
+
+    Write-Host "==> Generando el instalador..."
+    $instaladores = Join-Path $trabajo "instalador"
+    New-Item -ItemType Directory -Force $instaladores | Out-Null
+
+    # El UUID fijo hace que Windows trate las versiones nuevas como actualizacion del mismo programa.
+    & $jpackage `
+        --type exe `
+        --app-image (Join-Path $salida $nombre) `
+        --name $nombre `
+        --app-version $Version `
+        --vendor "KUMOC" `
+        --description "KUMOC - Control de stock, presupuestos y ordenes de trabajo" `
+        --win-shortcut `
+        --win-menu `
+        --win-menu-group $nombre `
+        --win-dir-chooser `
+        --win-upgrade-uuid "54aec0db-f1e8-41dc-b1f7-4382179eb667" `
+        --dest $instaladores
+    if ($LASTEXITCODE -ne 0) { throw "Fallo jpackage al generar el instalador." }
+
+    $setup = Join-Path $dist "$nombre-$Version-setup.exe"
+    if (Test-Path $setup) { Remove-Item $setup }
+    Move-Item (Join-Path $instaladores "$nombre-$Version.exe") $setup
+    $mbSetup = [math]::Round((Get-Item $setup).Length / 1MB, 1)
+    Write-Host "Listo: $setup ($mbSetup MB)"
+}
+
 Write-Host "Para probar sin comprimir: $salida\$nombre\$nombre.exe"
