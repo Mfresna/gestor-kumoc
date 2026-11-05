@@ -5,6 +5,9 @@ CREATE INDEX idx_presupuesto_estado ON PRESUPUESTO (estado);
 -- PRESUPUESTO: listado de fin de mes (cobradas pendientes de facturar en ARCA)
 CREATE INDEX idx_presupuesto_arca ON PRESUPUESTO (facturar_arca, fecha_facturacion_arca);
 
+-- PAGO: pagos de cada orden
+CREATE INDEX idx_pago_presupuesto ON PAGO (id_presupuesto);
+
 -- PRODUCTOSxPRESUPUESTOS: detalle de líneas por presupuesto
 CREATE INDEX idx_pxp_presupuesto ON PRODUCTOSxPRESUPUESTOS (id_presupuesto);
 

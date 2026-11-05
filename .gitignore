@@ -55,3 +55,6 @@ desktop.ini
 .env
 *.local
 config.local.properties
+
+# Salida del empaquetado (ZIP/instalador para distribuir)
+dist/

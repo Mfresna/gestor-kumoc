@@ -5,6 +5,7 @@
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
@@ -18,12 +19,20 @@
     <Label fx:id="lblTitulo" text="REGISTRAR COBRO" styleClass="subtitulo"/>
     <Label fx:id="lblDetalle" styleClass="texto-suave" wrapText="true"/>
 
+    <Label fx:id="lblResumen" wrapText="true"/>
+
     <VBox spacing="3">
         <Label text="FECHA DE COBRO *" styleClass="etiqueta-campo"/>
         <DatePicker fx:id="dpFecha" maxWidth="Infinity"/>
     </VBox>
+    <VBox spacing="3">
+        <Label text="ME PAGÓ… (MONTO) *" styleClass="etiqueta-campo"/>
+        <TextField fx:id="txtMonto" promptText="0,00"/>
+        <Label fx:id="lblAviso" styleClass="texto-suave" wrapText="true"/>
+    </VBox>
     <CheckBox fx:id="chkFacturar" text="Facturar en ARCA"/>
-    <Label text="Si se marca, la orden aparecerá en el listado de fin de mes de pendientes de facturar."
+    <Label fx:id="lblAyudaFacturar"
+           text="Si se marca, la orden aparecerá en el listado de fin de mes de pendientes de facturar."
            styleClass="texto-suave" wrapText="true"/>
 
     <Region prefHeight="4"/>

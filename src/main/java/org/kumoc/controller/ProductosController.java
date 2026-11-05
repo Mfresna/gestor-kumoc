@@ -25,6 +25,7 @@ import org.kumoc.ui.Dialogos;
 import org.kumoc.ui.EstadoApp;
 import org.kumoc.ui.Formato;
 import org.kumoc.ui.Imagenes;
+import org.kumoc.ui.ModoFormulario;
 import org.kumoc.ui.Tablas;
 
 import java.io.File;
@@ -65,6 +66,10 @@ public class ProductosController implements Seccion {
     @FXML
     private Button btnQuitarImagen;
     @FXML
+    private Button btnElegirImagen;
+    @FXML
+    private Button btnPrincipal;
+    @FXML
     private TextField txtCodigo;
     @FXML
     private TextField txtNombre;
@@ -88,6 +93,7 @@ public class ProductosController implements Seccion {
 
     /** Producto cargado en el formulario; null si se esta creando uno nuevo. */
     private Producto editado;
+    private ModoFormulario modo = ModoFormulario.NUEVO;
     /** Imagen mostrada en el formulario (guardada o recien elegida). */
     private String imagenForm;
     /** Imagen elegida en esta edicion que todavia no esta guardada en un producto. */
@@ -115,7 +121,7 @@ public class ProductosController implements Seccion {
             }
         });
 
-        colCodigo.setCellValueFactory(c -> new ReadOnlyStringWrapper(c.getValue().codigo()));
+        colCodigo.setCellValueFactory(c -> new ReadOnlyStringWrapper(vacio(c.getValue().codigo())));
         colNombre.setCellValueFactory(c -> new ReadOnlyStringWrapper(c.getValue().nombre()));
         colTalle.setCellValueFactory(c -> new ReadOnlyStringWrapper(vacio(c.getValue().talle())));
         colColor.setCellValueFactory(c -> new ReadOnlyStringWrapper(vacio(c.getValue().color())));
@@ -166,7 +172,34 @@ public class ProductosController implements Seccion {
         limpiarFormulario();
     }
 
+    /** NUEVO/EDICION guardan; VISTA habilita los campos para editar. */
     @FXML
+    private void accionPrincipal() {
+
+        if (modo == ModoFormulario.VISTA) {
+            aplicarModo(ModoFormulario.EDICION);
+        } else {
+            guardar();
+        }
+    }
+
+    private void aplicarModo(ModoFormulario nuevoModo) {
+
+        modo = nuevoModo;
+        btnPrincipal.setText(modo.textoBoton());
+        boolean editable = modo.camposEditables();
+        txtCodigo.setDisable(!editable);
+        txtNombre.setDisable(!editable);
+        txtTalle.setDisable(!editable);
+        txtColor.setDisable(!editable);
+        txtPublico.setDisable(!editable);
+        txtDescripcion.setDisable(!editable);
+        txtPrecio.setDisable(!editable);
+        txtMinimo.setDisable(!editable);
+        btnElegirImagen.setDisable(!editable);
+        btnQuitarImagen.setDisable(!editable || imagenForm == null);
+    }
+
     private void guardar() {
 
         Dialogos.ejecutar(() -> {
@@ -268,7 +301,7 @@ public class ProductosController implements Seccion {
 
         String filtro = texto == null ? "" : texto.trim().toLowerCase(Locale.ROOT);
         filtrados.setPredicate(p -> filtro.isEmpty()
-                || p.codigo().toLowerCase(Locale.ROOT).contains(filtro)
+                || vacio(p.codigo()).toLowerCase(Locale.ROOT).contains(filtro)
                 || p.nombre().toLowerCase(Locale.ROOT).contains(filtro)
                 || vacio(p.talle()).toLowerCase(Locale.ROOT).contains(filtro)
                 || vacio(p.color()).toLowerCase(Locale.ROOT).contains(filtro));
@@ -283,7 +316,7 @@ public class ProductosController implements Seccion {
         editado = producto;
         imagenForm = producto.imagen();
         lblFormTitulo.setText("EDITAR PRODUCTO");
-        txtCodigo.setText(producto.codigo());
+        txtCodigo.setText(vacio(producto.codigo()));
         txtNombre.setText(producto.nombre());
         txtTalle.setText(vacio(producto.talle()));
         txtColor.setText(vacio(producto.color()));
@@ -291,9 +324,10 @@ public class ProductosController implements Seccion {
         txtDescripcion.setText(vacio(producto.descripcion()));
         txtPrecio.setText(producto.precioUnitario().toPlainString().replace('.', ','));
         txtMinimo.setText(String.valueOf(producto.stockMinimo()));
-        btnBaja.setText(producto.activo() ? "Dar de baja" : "Reactivar");
+        btnBaja.setText(producto.activo() ? "DAR DE BAJA" : "REACTIVAR");
         btnBaja.setDisable(false);
         mostrarImagen();
+        aplicarModo(ModoFormulario.VISTA);
     }
 
     private void limpiarFormulario() {
@@ -310,9 +344,10 @@ public class ProductosController implements Seccion {
         txtDescripcion.clear();
         txtPrecio.clear();
         txtMinimo.setText("0");
-        btnBaja.setText("Dar de baja");
+        btnBaja.setText("DAR DE BAJA");
         btnBaja.setDisable(true);
         mostrarImagen();
+        aplicarModo(ModoFormulario.NUEVO);
     }
 
     private void mostrarImagen() {

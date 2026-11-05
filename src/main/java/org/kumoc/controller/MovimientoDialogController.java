@@ -124,7 +124,11 @@ public class MovimientoDialogController {
     /** Texto con que se muestra un producto en listas desplegables. */
     public static String descripcion(Producto p) {
 
-        StringBuilder texto = new StringBuilder(p.codigo()).append(" – ").append(p.nombre());
+        StringBuilder texto = new StringBuilder();
+        if (p.codigo() != null) {
+            texto.append(p.codigo()).append(" – ");
+        }
+        texto.append(p.nombre());
         if (p.talle() != null) {
             texto.append(" (").append(p.talle()).append(")");
         }

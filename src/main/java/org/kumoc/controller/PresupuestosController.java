@@ -10,17 +10,25 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import org.kumoc.AppContext;
+import org.kumoc.config.AppPaths;
+import org.kumoc.config.DatosNegocio;
+import org.kumoc.exception.NegocioException;
 import org.kumoc.model.Cliente;
 import org.kumoc.model.EstadoPresupuesto;
 import org.kumoc.model.ItemPresupuesto;
 import org.kumoc.model.Presupuesto;
 import org.kumoc.model.Producto;
+import org.kumoc.pdf.PresupuestoPdf;
+import org.kumoc.ui.ArchivosPdf;
 import org.kumoc.ui.Dialogos;
 import org.kumoc.ui.EstadoApp;
 import org.kumoc.ui.Formato;
 import org.kumoc.ui.Tablas;
 import org.kumoc.ui.Ventanas;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +79,8 @@ public class PresupuestosController implements Seccion {
     private Button btnRechazar;
     @FXML
     private Button btnEliminar;
+    @FXML
+    private Button btnImprimir;
 
     private final ObservableList<Presupuesto> presupuestos = FXCollections.observableArrayList();
     private final Map<Integer, Cliente> clientes = new HashMap<>();
@@ -161,6 +171,38 @@ public class PresupuestosController implements Seccion {
         });
     }
 
+    @FXML
+    private void imprimirPdf() {
+
+        accionSobreSeleccion(p -> {
+            Cliente cliente = clientes.get(p.idCliente());
+            if (cliente == null) {
+                throw new NegocioException("No se encontró el cliente del presupuesto.");
+            }
+
+            Path destino = ArchivosPdf.elegirDestino(tabla.getScene().getWindow(), PresupuestoPdf.nombreSugerido(p));
+            if (destino == null) {
+                return;
+            }
+
+            boolean teniaDatosNegocio = Files.exists(AppPaths.getBusinessDataPath());
+            try {
+                PresupuestoPdf.generar(p, cliente, productos, DatosNegocio.cargar(), destino);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new NegocioException("No se pudo generar el PDF. Verificá que el archivo no esté abierto "
+                        + "y que tengas permiso para guardar en esa carpeta.");
+            }
+
+            String aviso = "Se guardó en:\n" + destino;
+            if (!teniaDatosNegocio) {
+                aviso += "\n\nPara mostrar tus datos de pago y contacto en el pie del PDF, completá el archivo:\n"
+                        + AppPaths.getBusinessDataPath();
+            }
+            Dialogos.info("PDF generado", aviso);
+        });
+    }
+
     private void abrirEditor(Presupuesto existente) {
 
         Dialogos.ejecutar(() -> {
@@ -168,8 +210,10 @@ public class PresupuestosController implements Seccion {
                     existente == null ? "Nuevo presupuesto" : "Editar presupuesto", tabla.getScene().getWindow(),
                     (PresupuestoDialogController c) -> c.preparar(existente));
 
-            if (dialogo.guardado() != null) {
+            if (dialogo.guardado() != null || dialogo.dadoDeBaja()) {
                 recargar();
+            }
+            if (dialogo.guardado() != null) {
                 presupuestos.stream()
                         .filter(p -> p.idPresupuesto().equals(dialogo.guardado().idPresupuesto()))
                         .findFirst()
@@ -189,7 +233,7 @@ public class PresupuestosController implements Seccion {
     private void recargar() {
 
         clientes.clear();
-        AppContext.get().clientes().listar().forEach(c -> clientes.put(c.idCliente(), c));
+        AppContext.get().clientes().listar(false).forEach(c -> clientes.put(c.idCliente(), c));
         productos.clear();
         AppContext.get().productos().listar(false).forEach(p -> productos.put(p.idProducto(), p));
 
@@ -235,6 +279,7 @@ public class PresupuestosController implements Seccion {
         btnAprobar.setDisable(!abierto);
         btnRechazar.setDisable(!abierto);
         btnEliminar.setDisable(!hay);
+        btnImprimir.setDisable(!hay);
     }
 
     private String nombreCliente(int idCliente) {

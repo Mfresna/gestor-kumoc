@@ -10,17 +10,22 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import org.kumoc.AppContext;
+import org.kumoc.exception.NegocioException;
 import org.kumoc.model.Cliente;
 import org.kumoc.model.EstadoPresupuesto;
 import org.kumoc.model.ItemPresupuesto;
 import org.kumoc.model.Presupuesto;
 import org.kumoc.model.Producto;
+import org.kumoc.pdf.FaltantesPdf;
+import org.kumoc.ui.ArchivosPdf;
 import org.kumoc.ui.Dialogos;
 import org.kumoc.ui.EstadoApp;
 import org.kumoc.ui.Formato;
 import org.kumoc.ui.Tablas;
 import org.kumoc.ui.Ventanas;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -82,6 +87,8 @@ public class OrdenesController implements Seccion {
     private Button btnCobro;
     @FXML
     private Button btnFacturada;
+    @FXML
+    private Button btnEliminar;
 
     private final ObservableList<Presupuesto> ordenes = FXCollections.observableArrayList();
     private final Map<Integer, Cliente> clientes = new HashMap<>();
@@ -96,8 +103,7 @@ public class OrdenesController implements Seccion {
         colTotal.setCellValueFactory(c -> new ReadOnlyStringWrapper(Formato.dinero(c.getValue().total())));
         colEstado.setCellValueFactory(c -> new ReadOnlyStringWrapper(
                 c.getValue().estado() == EstadoPresupuesto.ORDEN_TRABAJO ? "En producción" : "Venta registrada"));
-        colCobro.setCellValueFactory(c -> new ReadOnlyStringWrapper(
-                c.getValue().cobrado() ? Formato.fecha(c.getValue().fechaCobro()) : "Pendiente"));
+        colCobro.setCellValueFactory(c -> new ReadOnlyStringWrapper(textoCobro(c.getValue())));
         colArca.setCellValueFactory(c -> new ReadOnlyStringWrapper(textoArca(c.getValue())));
         tabla.setItems(ordenes);
         tabla.setPlaceholder(new Label("No hay órdenes para mostrar."));
@@ -173,11 +179,13 @@ public class OrdenesController implements Seccion {
             CobroDialogController dialogo = Ventanas.mostrarModal("CobroDialog.fxml", "Registrar cobro",
                     tabla.getScene().getWindow(),
                     (CobroDialogController c) -> c.preparar("Orden N° " + orden.idPresupuesto() + " – "
-                            + nombreCliente(orden.idCliente()) + " – " + Formato.dinero(orden.total())));
+                            + nombreCliente(orden.idCliente()),
+                            orden.total(), orden.totalPagado(), orden.saldo()));
 
             CobroDialogController.Resultado r = dialogo.resultado();
             if (r != null) {
-                AppContext.get().presupuestos().registrarCobro(orden.idPresupuesto(), r.fechaCobro(), r.facturarArca());
+                AppContext.get().presupuestos().registrarCobro(
+                        orden.idPresupuesto(), r.fechaCobro(), r.monto(), r.facturarArca());
                 recargar();
             }
         });
@@ -195,6 +203,42 @@ public class OrdenesController implements Seccion {
         });
     }
 
+    /** Listado en PDF de lo que falta fabricar para todas las ordenes en produccion (no depende de la seleccion). */
+    @FXML
+    private void imprimirFaltantes() {
+
+        Dialogos.ejecutar(() -> {
+            Path destino = ArchivosPdf.elegirDestino(tabla.getScene().getWindow(), FaltantesPdf.nombreSugerido());
+            if (destino == null) {
+                return;
+            }
+
+            try {
+                FaltantesPdf.generar(AppContext.get().presupuestos().listarFaltantesDeFabricacion(), destino);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new NegocioException("No se pudo generar el PDF. Verificá que el archivo no esté abierto "
+                        + "y que tengas permiso para guardar en esa carpeta.");
+            }
+            Dialogos.info("PDF generado", "Se guardó en:\n" + destino);
+        });
+    }
+
+    @FXML
+    private void eliminarOrden() {
+
+        accionSobreSeleccion(orden -> {
+            if (Dialogos.confirmar("Eliminar orden",
+                    "¿Eliminar la orden N° " + orden.idPresupuesto() + "? Se revertirá el stock (se borran sus "
+                            + "movimientos de fabricación y venta). Esta acción no se puede deshacer.")) {
+                AppContext.get().presupuestos().eliminarOrden(orden.idPresupuesto());
+                tabla.getSelectionModel().clearSelection();
+                EstadoApp.refrescarAlertas();
+                recargar();
+            }
+        });
+    }
+
     private void accionSobreSeleccion(Consumer<Presupuesto> accion) {
 
         Presupuesto orden = tabla.getSelectionModel().getSelectedItem();
@@ -206,7 +250,7 @@ public class OrdenesController implements Seccion {
     private void recargar() {
 
         clientes.clear();
-        AppContext.get().clientes().listar().forEach(c -> clientes.put(c.idCliente(), c));
+        AppContext.get().clientes().listar(false).forEach(c -> clientes.put(c.idCliente(), c));
         productos.clear();
         AppContext.get().productos().listar(false).forEach(p -> productos.put(p.idProducto(), p));
 
@@ -259,6 +303,7 @@ public class OrdenesController implements Seccion {
 
         btnFabricacion.setDisable(!enProduccion);
         btnVenta.setDisable(!enProduccion || !faltantes.isEmpty());
+        btnEliminar.setDisable(!hay || !orden.pagos().isEmpty() || orden.fechaFacturacionArca() != null);
         btnCobro.setDisable(!hay || orden.cobrado());
         btnFacturada.setDisable(!hay || !orden.cobrado() || !orden.facturarArca() || orden.fechaFacturacionArca() != null);
     }
@@ -275,12 +320,29 @@ public class OrdenesController implements Seccion {
 
     private String resumen(Presupuesto orden, Map<Integer, Integer> faltantes) {
 
-        if (orden.estado() == EstadoPresupuesto.VENTA) {
-            return "Venta registrada. " + (orden.cobrado() ? "Cobrada el " + Formato.fecha(orden.fechaCobro()) + "." : "Pendiente de cobro.");
+        String produccion = orden.estado() == EstadoPresupuesto.VENTA
+                ? "Venta registrada."
+                : faltantes.isEmpty()
+                        ? "Stock completo: la orden está lista para pasar a venta."
+                        : "Faltan fabricar unidades de " + faltantes.size() + " producto(s) antes de registrar la venta.";
+
+        String cobro = orden.cobrado()
+                ? "Cobrada el " + Formato.fecha(orden.fechaCobro()) + "."
+                : orden.cobroParcial()
+                        ? "Cobro parcial: pagó " + Formato.dinero(orden.totalPagado()) + " de "
+                                + Formato.dinero(orden.total()) + ", faltan " + Formato.dinero(orden.saldo()) + "."
+                        : "Pendiente de cobro.";
+        return produccion + " " + cobro;
+    }
+
+    private static String textoCobro(Presupuesto p) {
+
+        if (p.cobrado()) {
+            return "Cobrado " + Formato.fecha(p.fechaCobro());
         }
-        return faltantes.isEmpty()
-                ? "Stock completo: la orden está lista para pasar a venta."
-                : "Faltan fabricar unidades de " + faltantes.size() + " producto(s) antes de registrar la venta.";
+        return p.cobroParcial()
+                ? "Pagó " + Formato.dinero(p.totalPagado()) + " – faltan " + Formato.dinero(p.saldo())
+                : "Pendiente";
     }
 
     private static String textoArca(Presupuesto p) {

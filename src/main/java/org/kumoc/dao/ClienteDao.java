@@ -16,7 +16,8 @@ import java.util.Optional;
 public class ClienteDao {
 
     private static final String COLUMNAS =
-            "id_cliente, razon_social, cuit, tipo_factura, email, telefono, direccion";
+            "id_cliente, razon_social, cuit, tipo_factura, email, telefono, direccion, "
+                    + "localidad, codigo_postal, provincia, activo";
 
     private final Connection connection;
 
@@ -27,8 +28,8 @@ public class ClienteDao {
     /** Inserta el cliente y devuelve su id generado. */
     public int insertar(Cliente c) {
 
-        String sql = "INSERT INTO CLIENTES(razon_social, cuit, tipo_factura, email, telefono, direccion) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO CLIENTES(razon_social, cuit, tipo_factura, email, telefono, direccion, "
+                + "localidad, codigo_postal, provincia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, c.razonSocial());
@@ -37,6 +38,9 @@ public class ClienteDao {
             ps.setString(4, c.email());
             ps.setString(5, c.telefono());
             ps.setString(6, c.direccion());
+            ps.setString(7, c.localidad());
+            ps.setString(8, c.codigoPostal());
+            ps.setString(9, c.provincia());
             ps.executeUpdate();
 
             try (ResultSet keys = ps.getGeneratedKeys()) {
@@ -51,7 +55,7 @@ public class ClienteDao {
     public void actualizar(Cliente c) {
 
         String sql = "UPDATE CLIENTES SET razon_social = ?, cuit = ?, tipo_factura = ?, email = ?, "
-                + "telefono = ?, direccion = ? WHERE id_cliente = ?";
+                + "telefono = ?, direccion = ?, localidad = ?, codigo_postal = ?, provincia = ? WHERE id_cliente = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, c.razonSocial());
@@ -60,17 +64,22 @@ public class ClienteDao {
             ps.setString(4, c.email());
             ps.setString(5, c.telefono());
             ps.setString(6, c.direccion());
-            ps.setInt(7, c.idCliente());
+            ps.setString(7, c.localidad());
+            ps.setString(8, c.codigoPostal());
+            ps.setString(9, c.provincia());
+            ps.setInt(10, c.idCliente());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new AccesoDatosException(e);
         }
     }
 
-    public void eliminar(int idCliente) {
+    public void cambiarActivo(int idCliente, boolean activo) {
 
-        try (PreparedStatement ps = connection.prepareStatement("DELETE FROM CLIENTES WHERE id_cliente = ?")) {
-            ps.setInt(1, idCliente);
+        try (PreparedStatement ps = connection.prepareStatement(
+                "UPDATE CLIENTES SET activo = ? WHERE id_cliente = ?")) {
+            ps.setInt(1, activo ? 1 : 0);
+            ps.setInt(2, idCliente);
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new AccesoDatosException(e);
@@ -105,9 +114,10 @@ public class ClienteDao {
         }
     }
 
-    public List<Cliente> listar() {
+    public List<Cliente> listar(boolean soloActivos) {
 
-        String sql = "SELECT " + COLUMNAS + " FROM CLIENTES ORDER BY razon_social";
+        String sql = "SELECT " + COLUMNAS + " FROM CLIENTES "
+                + (soloActivos ? "WHERE activo = 1 " : "") + "ORDER BY razon_social";
 
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -122,20 +132,6 @@ public class ClienteDao {
         }
     }
 
-    public boolean tienePresupuestos(int idCliente) {
-
-        String sql = "SELECT 1 FROM PRESUPUESTO WHERE id_cliente = ? LIMIT 1";
-
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, idCliente);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
-        } catch (SQLException e) {
-            throw new AccesoDatosException(e);
-        }
-    }
-
     private Cliente mapear(ResultSet rs) throws SQLException {
         return new Cliente(
                 rs.getInt("id_cliente"),
@@ -144,6 +140,10 @@ public class ClienteDao {
                 TipoFactura.valueOf(rs.getString("tipo_factura")),
                 rs.getString("email"),
                 rs.getString("telefono"),
-                rs.getString("direccion"));
+                rs.getString("direccion"),
+                rs.getString("localidad"),
+                rs.getString("codigo_postal"),
+                rs.getString("provincia"),
+                rs.getInt("activo") == 1);
     }
 }

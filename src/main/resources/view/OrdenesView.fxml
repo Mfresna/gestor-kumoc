@@ -29,7 +29,7 @@
             <TableColumn fx:id="colCliente" text="CLIENTE" prefWidth="230"/>
             <TableColumn fx:id="colTotal" text="TOTAL" prefWidth="120" style="-fx-alignment: CENTER-RIGHT;"/>
             <TableColumn fx:id="colEstado" text="ESTADO" prefWidth="130"/>
-            <TableColumn fx:id="colCobro" text="COBRO" prefWidth="110"/>
+            <TableColumn fx:id="colCobro" text="COBRO" prefWidth="230"/>
             <TableColumn fx:id="colArca" text="ARCA" prefWidth="130"/>
         </columns>
     </TableView>
@@ -61,6 +61,10 @@
                     onAction="#registrarCobro"/>
             <Button fx:id="btnFacturada" text="Marcar facturada en ARCA" styleClass="boton-secundario"
                     maxWidth="Infinity" onAction="#marcarFacturada"/>
+            <Button fx:id="btnFaltantes" text="Imprimir faltantes (PDF)" styleClass="boton-secundario"
+                    maxWidth="Infinity" onAction="#imprimirFaltantes"/>
+            <Button fx:id="btnEliminar" text="Eliminar orden" styleClass="boton-secundario" maxWidth="Infinity"
+                    onAction="#eliminarOrden"/>
         </VBox>
     </HBox>
 </VBox>

@@ -13,8 +13,10 @@ import org.kumoc.model.TipoMovimiento;
 import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Registra movimientos y calcula el stock. Cada movimiento se valida y se inserta en una
@@ -67,6 +69,29 @@ public class StockService {
             throw new NegocioException("El ajuste no puede ser cero.");
         }
         return registrar(idProducto, TipoMovimiento.AJUSTE, cantidad, motivo, null);
+    }
+
+    /**
+     * Borra los movimientos ligados a una orden (fabricacion y venta) para que el stock vuelva a su valor previo.
+     * Si algun producto quedara con stock fisico negativo lanza NegocioException; al correr dentro de la
+     * transaccion de quien la llama, el rollback deja todo como estaba.
+     */
+    public void revertirMovimientosDeOrden(int idPresupuesto) {
+
+        Transaccion.ejecutar(connection, () -> {
+            Set<Integer> afectados = new LinkedHashSet<>();
+            movimientoDao.listarPorPresupuesto(idPresupuesto).forEach(m -> afectados.add(m.idProducto()));
+
+            movimientoDao.eliminarPorPresupuesto(idPresupuesto);
+
+            for (int idProducto : afectados) {
+                if (movimientoDao.obtenerStock(idProducto).fisico() < 0) {
+                    String nombre = productoDao.buscarPorId(idProducto).map(Producto::nombre).orElse("un producto");
+                    throw new NegocioException("No se puede eliminar la orden: el stock de \"" + nombre
+                            + "\" quedaría en negativo (esas unidades ya se usaron en otra operación).");
+                }
+            }
+        });
     }
 
     /** Productos activos con stock fisico calculado por debajo de su stock minimo. */

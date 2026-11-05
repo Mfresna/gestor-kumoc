@@ -29,7 +29,7 @@ public class ProductoService {
     /** Crea el producto si idProducto es null; si no, lo actualiza. Devuelve el producto guardado. */
     public Producto guardar(Producto producto) {
 
-        String codigo = Validaciones.textoObligatorio(producto.codigo(), "El código es obligatorio.");
+        String codigo = Validaciones.vacioANull(producto.codigo());
         String nombre = Validaciones.textoObligatorio(producto.nombre(), "El nombre es obligatorio.");
 
         if (producto.precioUnitario() == null || producto.precioUnitario().signum() < 0) {
@@ -39,11 +39,13 @@ public class ProductoService {
             throw new NegocioException("El stock mínimo no puede ser negativo.");
         }
 
-        productoDao.buscarPorCodigo(codigo).ifPresent(existente -> {
-            if (!existente.idProducto().equals(producto.idProducto())) {
-                throw new NegocioException("Ya existe un producto con ese código.");
-            }
-        });
+        if (codigo != null) {
+            productoDao.buscarPorCodigo(codigo).ifPresent(existente -> {
+                if (!existente.idProducto().equals(producto.idProducto())) {
+                    throw new NegocioException("Ya existe un producto con ese código.");
+                }
+            });
+        }
 
         Producto limpio = new Producto(producto.idProducto(), codigo, nombre,
                 Validaciones.vacioANull(producto.talle()),

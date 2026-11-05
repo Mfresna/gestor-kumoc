@@ -6,10 +6,13 @@ import org.kumoc.dao.ProductoDao;
 import org.kumoc.database.Transaccion;
 import org.kumoc.exception.NegocioException;
 import org.kumoc.model.EstadoPresupuesto;
+import org.kumoc.model.FaltanteFabricacion;
 import org.kumoc.model.ItemPresupuesto;
+import org.kumoc.model.Pago;
 import org.kumoc.model.Presupuesto;
 import org.kumoc.model.Producto;
 
+import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
 import java.time.LocalDate;
@@ -67,7 +70,7 @@ public class PresupuestoService {
             List<ItemPresupuesto> normalizados = normalizarItems(items);
 
             Presupuesto nuevo = new Presupuesto(null, idCliente, LocalDate.now(), EstadoPresupuesto.PRESUPUESTO,
-                    normalizados, null, false, null);
+                    normalizados, List.of(), false, null);
             int id = presupuestoDao.insertar(nuevo);
             return obtener(id);
         });
@@ -82,7 +85,7 @@ public class PresupuestoService {
             validarCliente(idCliente);
 
             presupuestoDao.reemplazarContenido(new Presupuesto(idPresupuesto, idCliente, actual.fechaEmision(),
-                    actual.estado(), normalizarItems(items), null, false, null));
+                    actual.estado(), normalizarItems(items), List.of(), false, null));
             return obtener(idPresupuesto);
         });
     }
@@ -117,6 +120,85 @@ public class PresupuestoService {
             }
         }
         return faltantes;
+    }
+
+    /**
+     * Listado de fabricacion: por producto, lo pedido en todas las ordenes en produccion contra el stock fisico.
+     * Solo incluye productos que realmente hay que fabricar (aFabricar &gt; 0), ordenados por codigo.
+     */
+    public List<FaltanteFabricacion> listarFaltantesDeFabricacion() {
+
+        Map<Integer, Integer> pedidoPorProducto = new LinkedHashMap<>();
+        Map<Integer, List<Integer>> ordenesPorProducto = new LinkedHashMap<>();
+
+        for (Presupuesto orden : presupuestoDao.listar(EstadoPresupuesto.ORDEN_TRABAJO)) {
+            for (ItemPresupuesto item : orden.items()) {
+                pedidoPorProducto.merge(item.idProducto(), item.cantidad(), Integer::sum);
+                ordenesPorProducto.computeIfAbsent(item.idProducto(), k -> new ArrayList<>())
+                        .add(orden.idPresupuesto());
+            }
+        }
+
+        List<FaltanteFabricacion> faltantes = new ArrayList<>();
+        pedidoPorProducto.forEach((idProducto, pedido) -> {
+            int fisico = stockService.obtenerStock(idProducto).fisico();
+            int aFabricar = Math.max(0, pedido - fisico);
+            if (aFabricar > 0) {
+                productoDao.buscarPorId(idProducto).ifPresent(producto -> faltantes.add(new FaltanteFabricacion(
+                        producto, pedido, fisico, aFabricar,
+                        ordenesPorProducto.get(idProducto).stream().sorted().toList())));
+            }
+        });
+        // Por codigo (natural); los productos sin codigo van al final, ordenados por nombre.
+        faltantes.sort((a, b) -> {
+            String codigoA = a.producto().codigo();
+            String codigoB = b.producto().codigo();
+            if (codigoA != null && codigoB != null) {
+                return compararNatural(codigoA, codigoB);
+            }
+            if (codigoA != null) {
+                return -1;
+            }
+            if (codigoB != null) {
+                return 1;
+            }
+            return compararNatural(a.producto().nombre(), b.producto().nombre());
+        });
+        return faltantes;
+    }
+
+    /** Orden "natural": CH-2 antes que CH-10 (los tramos numericos se comparan como numeros). */
+    private static int compararNatural(String a, String b) {
+
+        int i = 0;
+        int j = 0;
+        while (i < a.length() && j < b.length()) {
+            if (Character.isDigit(a.charAt(i)) && Character.isDigit(b.charAt(j))) {
+                int finA = i;
+                while (finA < a.length() && Character.isDigit(a.charAt(finA))) {
+                    finA++;
+                }
+                int finB = j;
+                while (finB < b.length() && Character.isDigit(b.charAt(finB))) {
+                    finB++;
+                }
+                int comparacion = new java.math.BigInteger(a.substring(i, finA))
+                        .compareTo(new java.math.BigInteger(b.substring(j, finB)));
+                if (comparacion != 0) {
+                    return comparacion;
+                }
+                i = finA;
+                j = finB;
+            } else {
+                int comparacion = Character.compare(Character.toLowerCase(a.charAt(i)), Character.toLowerCase(b.charAt(j)));
+                if (comparacion != 0) {
+                    return comparacion;
+                }
+                i++;
+                j++;
+            }
+        }
+        return Integer.compare(a.length() - i, b.length() - j);
     }
 
     /** Registra la fabricacion de unidades de una orden como INGRESO de stock con motivo "Fabricación". */
@@ -154,12 +236,19 @@ public class PresupuestoService {
         });
     }
 
-    /** Registra el cobro (realizado fuera de la aplicacion) y si queda marcada para facturar en ARCA. */
-    public void registrarCobro(int idPresupuesto, LocalDate fechaCobro, boolean facturarArca) {
+    /**
+     * Registra un pago (realizado fuera de la aplicacion), total o parcial. El monto no puede superar
+     * el saldo. "Facturar en ARCA" se define solo cuando el pago salda la orden.
+     */
+    public void registrarCobro(int idPresupuesto, LocalDate fechaCobro, BigDecimal monto, boolean facturarArca) {
 
         if (fechaCobro == null) {
             throw new NegocioException("La fecha de cobro es obligatoria.");
         }
+        if (monto == null || monto.signum() <= 0) {
+            throw new NegocioException("El monto del pago debe ser mayor a cero.");
+        }
+        BigDecimal montoPago = monto.setScale(2, RoundingMode.HALF_UP);
 
         Transaccion.ejecutar(connection, () -> {
             Presupuesto presupuesto = obtener(idPresupuesto);
@@ -167,10 +256,18 @@ public class PresupuestoService {
             if (presupuesto.estado() != EstadoPresupuesto.ORDEN_TRABAJO && presupuesto.estado() != EstadoPresupuesto.VENTA) {
                 throw new NegocioException("Solo se registra el cobro de una orden de trabajo o una venta.");
             }
-            if (presupuesto.cobrado()) {
-                throw new NegocioException("El cobro ya fue registrado.");
+            BigDecimal saldo = presupuesto.saldo();
+            if (saldo.signum() == 0) {
+                throw new NegocioException("La orden no tiene saldo pendiente.");
             }
-            presupuestoDao.registrarCobro(idPresupuesto, fechaCobro, facturarArca);
+            if (montoPago.compareTo(saldo) > 0) {
+                throw new NegocioException("El monto supera el saldo pendiente.");
+            }
+
+            presupuestoDao.insertarPago(new Pago(null, idPresupuesto, fechaCobro, montoPago));
+            if (montoPago.compareTo(saldo) == 0) {
+                presupuestoDao.actualizarFacturarArca(idPresupuesto, facturarArca);
+            }
         });
     }
 
@@ -203,6 +300,30 @@ public class PresupuestoService {
             if (presupuesto.estado() != EstadoPresupuesto.PRESUPUESTO && presupuesto.estado() != EstadoPresupuesto.RECHAZADO) {
                 throw new NegocioException("No se puede eliminar una orden de trabajo ni una venta.");
             }
+            presupuestoDao.eliminar(idPresupuesto);
+        });
+    }
+
+    /**
+     * Elimina una orden de trabajo o venta y devuelve el stock a su valor previo (borra sus movimientos de
+     * fabricacion y venta). Se bloquea si tiene pagos registrados o ya fue facturada en ARCA.
+     */
+    public void eliminarOrden(int idPresupuesto) {
+
+        Transaccion.ejecutar(connection, () -> {
+            Presupuesto orden = obtener(idPresupuesto);
+
+            if (orden.estado() != EstadoPresupuesto.ORDEN_TRABAJO && orden.estado() != EstadoPresupuesto.VENTA) {
+                throw new NegocioException("Solo se elimina una orden de trabajo o una venta.");
+            }
+            if (!orden.pagos().isEmpty()) {
+                throw new NegocioException("La orden tiene cobros registrados; no se puede eliminar.");
+            }
+            if (orden.fechaFacturacionArca() != null) {
+                throw new NegocioException("La orden ya fue facturada en ARCA; no se puede eliminar.");
+            }
+
+            stockService.revertirMovimientosDeOrden(idPresupuesto);
             presupuestoDao.eliminar(idPresupuesto);
         });
     }

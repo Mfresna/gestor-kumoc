@@ -51,14 +51,15 @@
                 <Label fx:id="lblSinImagen" text="Sin imagen" styleClass="texto-suave"/>
             </StackPane>
             <VBox spacing="8">
-                <Button text="Elegir imagen…" styleClass="boton-secundario" onAction="#elegirImagen"/>
+                <Button fx:id="btnElegirImagen" text="Elegir imagen…" styleClass="boton-secundario"
+                        onAction="#elegirImagen"/>
                 <Button fx:id="btnQuitarImagen" text="Quitar imagen" styleClass="boton-secundario"
                         onAction="#quitarImagen"/>
             </VBox>
         </HBox>
 
         <VBox spacing="3">
-            <Label text="CÓDIGO *" styleClass="etiqueta-campo"/>
+            <Label text="CÓDIGO" styleClass="etiqueta-campo"/>
             <TextField fx:id="txtCodigo"/>
         </VBox>
         <VBox spacing="3">
@@ -97,10 +98,10 @@
         <Region VBox.vgrow="ALWAYS"/>
         <HBox spacing="10">
             <Button text="Nuevo" styleClass="boton-secundario" onAction="#nuevo"/>
-            <Button text="Guardar" styleClass="boton-primario" onAction="#guardar" HBox.hgrow="ALWAYS"
-                    maxWidth="Infinity" defaultButton="true"/>
+            <Button fx:id="btnPrincipal" text="GUARDAR NUEVO" styleClass="boton-primario"
+                    onAction="#accionPrincipal" HBox.hgrow="ALWAYS" maxWidth="Infinity" defaultButton="true"/>
         </HBox>
-        <Button fx:id="btnBaja" text="Dar de baja" styleClass="boton-secundario" maxWidth="Infinity"
+        <Button fx:id="btnBaja" text="DAR DE BAJA" styleClass="boton-secundario" maxWidth="Infinity"
                 onAction="#cambiarBaja"/>
     </VBox>
 </HBox>

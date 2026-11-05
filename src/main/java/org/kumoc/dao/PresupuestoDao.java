@@ -3,6 +3,7 @@ package org.kumoc.dao;
 import org.kumoc.exception.AccesoDatosException;
 import org.kumoc.model.EstadoPresupuesto;
 import org.kumoc.model.ItemPresupuesto;
+import org.kumoc.model.Pago;
 import org.kumoc.model.Presupuesto;
 
 import java.sql.Connection;
@@ -20,7 +21,7 @@ import java.util.Optional;
 public class PresupuestoDao {
 
     private record Cabecera(int id, int idCliente, LocalDate fechaEmision, EstadoPresupuesto estado,
-                            LocalDate fechaCobro, boolean facturarArca, LocalDate fechaFacturacionArca) {
+                            boolean facturarArca, LocalDate fechaFacturacionArca) {
     }
 
     private final Connection connection;
@@ -32,17 +33,16 @@ public class PresupuestoDao {
     /** Inserta cabecera e items y devuelve el id generado. Conviene llamarlo dentro de una transaccion. */
     public int insertar(Presupuesto p) {
 
-        String sql = "INSERT INTO PRESUPUESTO(id_cliente, fecha_emision, estado, total, fecha_cobro, "
-                + "facturar_arca, fecha_facturacion_arca) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO PRESUPUESTO(id_cliente, fecha_emision, estado, total, "
+                + "facturar_arca, fecha_facturacion_arca) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, p.idCliente());
             ps.setString(2, p.fechaEmision().toString());
             ps.setString(3, p.estado().name());
             ps.setDouble(4, p.total().doubleValue());
-            SqlUtil.setFecha(ps, 5, p.fechaCobro());
-            ps.setInt(6, p.facturarArca() ? 1 : 0);
-            SqlUtil.setFecha(ps, 7, p.fechaFacturacionArca());
+            ps.setInt(5, p.facturarArca() ? 1 : 0);
+            SqlUtil.setFecha(ps, 6, p.fechaFacturacionArca());
             ps.executeUpdate();
 
             int id;
@@ -87,13 +87,26 @@ public class PresupuestoDao {
         }
     }
 
-    public void registrarCobro(int idPresupuesto, LocalDate fechaCobro, boolean facturarArca) {
+    /** Inserta un pago (total o parcial). Conviene llamarlo dentro de una transaccion. */
+    public void insertarPago(Pago pago) {
 
         try (PreparedStatement ps = connection.prepareStatement(
-                "UPDATE PRESUPUESTO SET fecha_cobro = ?, facturar_arca = ? WHERE id_presupuesto = ?")) {
-            ps.setString(1, fechaCobro.toString());
-            ps.setInt(2, facturarArca ? 1 : 0);
-            ps.setInt(3, idPresupuesto);
+                "INSERT INTO PAGO(id_presupuesto, fecha, monto) VALUES (?, ?, ?)")) {
+            ps.setInt(1, pago.idPresupuesto());
+            ps.setString(2, pago.fecha().toString());
+            ps.setDouble(3, pago.monto().doubleValue());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new AccesoDatosException(e);
+        }
+    }
+
+    public void actualizarFacturarArca(int idPresupuesto, boolean facturarArca) {
+
+        try (PreparedStatement ps = connection.prepareStatement(
+                "UPDATE PRESUPUESTO SET facturar_arca = ? WHERE id_presupuesto = ?")) {
+            ps.setInt(1, facturarArca ? 1 : 0);
+            ps.setInt(2, idPresupuesto);
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new AccesoDatosException(e);
@@ -118,6 +131,11 @@ public class PresupuestoDao {
         try {
             borrarItems(idPresupuesto);
             try (PreparedStatement ps = connection.prepareStatement(
+                    "DELETE FROM PAGO WHERE id_presupuesto = ?")) {
+                ps.setInt(1, idPresupuesto);
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = connection.prepareStatement(
                     "DELETE FROM PRESUPUESTO WHERE id_presupuesto = ?")) {
                 ps.setInt(1, idPresupuesto);
                 ps.executeUpdate();
@@ -138,18 +156,24 @@ public class PresupuestoDao {
                 : consultar("WHERE p.estado = ?", estado.name());
     }
 
-    /** Cobrados con flag "Facturar en ARCA" que aun no fueron facturados (listado de fin de mes). */
+    /**
+     * Cobrados con flag "Facturar en ARCA" que aun no fueron facturados (listado de fin de mes).
+     * El flag solo se define al saldar el cobro, por eso implica orden cobrada por completo.
+     */
     public List<Presupuesto> listarPendientesFacturarArca() {
-        return consultar("WHERE p.fecha_cobro IS NOT NULL AND p.facturar_arca = 1 "
-                + "AND p.fecha_facturacion_arca IS NULL");
+        return consultar("WHERE p.facturar_arca = 1 AND p.fecha_facturacion_arca IS NULL");
     }
 
     /** El filtro es siempre una constante del codigo; los valores van como parametros. */
     private List<Presupuesto> consultar(String where, Object... parametros) {
 
-        String sqlCabecera = "SELECT p.id_presupuesto, p.id_cliente, p.fecha_emision, p.estado, p.fecha_cobro, "
+        String sqlCabecera = "SELECT p.id_presupuesto, p.id_cliente, p.fecha_emision, p.estado, "
                 + "p.facturar_arca, p.fecha_facturacion_arca FROM PRESUPUESTO p " + where
                 + " ORDER BY p.fecha_emision DESC, p.id_presupuesto DESC";
+
+        String sqlPagos = "SELECT g.id_pago, g.id_presupuesto, g.fecha, g.monto "
+                + "FROM PAGO g JOIN PRESUPUESTO p ON p.id_presupuesto = g.id_presupuesto "
+                + where + " ORDER BY g.fecha, g.id_pago";
 
         String sqlItems = "SELECT i.id_prodxpres, i.id_presupuesto, i.id_producto, i.cantidad, i.precio_unitario "
                 + "FROM PRODUCTOSxPRESUPUESTOS i JOIN PRESUPUESTO p ON p.id_presupuesto = i.id_presupuesto "
@@ -166,7 +190,6 @@ public class PresupuestoDao {
                                 rs.getInt("id_cliente"),
                                 SqlUtil.aFecha(rs.getString("fecha_emision")),
                                 EstadoPresupuesto.valueOf(rs.getString("estado")),
-                                SqlUtil.aFecha(rs.getString("fecha_cobro")),
                                 rs.getInt("facturar_arca") == 1,
                                 SqlUtil.aFecha(rs.getString("fecha_facturacion_arca"))));
                     }
@@ -190,12 +213,30 @@ public class PresupuestoDao {
                 }
             }
 
+            // Pagos de todos los presupuestos filtrados, tambien en una sola consulta.
+            Map<Integer, List<Pago>> pagosPorPresupuesto = new HashMap<>();
+            try (PreparedStatement ps = connection.prepareStatement(sqlPagos)) {
+                asignarParametros(ps, parametros);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        pagosPorPresupuesto
+                                .computeIfAbsent(rs.getInt("id_presupuesto"), k -> new ArrayList<>())
+                                .add(new Pago(
+                                        rs.getInt("id_pago"),
+                                        rs.getInt("id_presupuesto"),
+                                        SqlUtil.aFecha(rs.getString("fecha")),
+                                        SqlUtil.aDinero(rs.getDouble("monto"))));
+                    }
+                }
+            }
+
             List<Presupuesto> presupuestos = new ArrayList<>();
             for (Cabecera c : cabeceras) {
                 presupuestos.add(new Presupuesto(
                         c.id(), c.idCliente(), c.fechaEmision(), c.estado(),
                         itemsPorPresupuesto.getOrDefault(c.id(), List.of()),
-                        c.fechaCobro(), c.facturarArca(), c.fechaFacturacionArca()));
+                        pagosPorPresupuesto.getOrDefault(c.id(), List.of()),
+                        c.facturarArca(), c.fechaFacturacionArca()));
             }
             return presupuestos;
         } catch (SQLException e) {
