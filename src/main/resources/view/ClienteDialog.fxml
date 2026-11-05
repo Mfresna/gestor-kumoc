@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" styleClass="contenido" spacing="10"
+      prefWidth="380" fx:controller="org.kumoc.controller.ClienteDialogController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="NUEVO CLIENTE" styleClass="titulo-seccion"/>
+
+    <VBox spacing="3">
+        <Label text="RAZÓN SOCIAL *" styleClass="etiqueta-campo"/>
+        <TextField fx:id="txtRazonSocial"/>
+    </VBox>
+    <VBox spacing="3">
+        <Label text="CUIT / CUIL" styleClass="etiqueta-campo"/>
+        <TextField fx:id="txtCuit" promptText="20-12345678-9"/>
+    </VBox>
+    <VBox spacing="3">
+        <Label text="TIPO DE FACTURA *" styleClass="etiqueta-campo"/>
+        <ComboBox fx:id="cmbTipoFactura" maxWidth="Infinity"/>
+    </VBox>
+    <VBox spacing="3">
+        <Label text="TELÉFONO" styleClass="etiqueta-campo"/>
+        <TextField fx:id="txtTelefono"/>
+    </VBox>
+    <VBox spacing="3">
+        <Label text="EMAIL" styleClass="etiqueta-campo"/>
+        <TextField fx:id="txtEmail"/>
+    </VBox>
+    <VBox spacing="3">
+        <Label text="DIRECCIÓN" styleClass="etiqueta-campo"/>
+        <TextField fx:id="txtDireccion"/>
+    </VBox>
+    <HBox spacing="10">
+        <VBox spacing="3" HBox.hgrow="ALWAYS">
+            <Label text="LOCALIDAD" styleClass="etiqueta-campo"/>
+            <TextField fx:id="txtLocalidad"/>
+        </VBox>
+        <VBox spacing="3" prefWidth="90" minWidth="90" maxWidth="90">
+            <Label text="CP" styleClass="etiqueta-campo"/>
+            <TextField fx:id="txtCodigoPostal"/>
+        </VBox>
+    </HBox>
+    <VBox spacing="3">
+        <Label text="PROVINCIA" styleClass="etiqueta-campo"/>
+        <TextField fx:id="txtProvincia"/>
+    </VBox>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Cancelar" styleClass="boton-secundario" cancelButton="true" onAction="#cancelar"/>
+        <Button text="GUARDAR NUEVO" styleClass="boton-primario" defaultButton="true" onAction="#guardar"/>
+    </HBox>
+</VBox>

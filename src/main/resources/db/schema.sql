@@ -1,6 +1,6 @@
 CREATE TABLE PRODUCTOS (
     id_producto INTEGER PRIMARY KEY AUTOINCREMENT,
-    codigo TEXT NOT NULL UNIQUE,
+    codigo TEXT UNIQUE,
     nombre TEXT NOT NULL,
     talle TEXT,
     publico_objetivo TEXT,
@@ -16,11 +16,15 @@ CREATE TABLE PRODUCTOS (
 CREATE TABLE CLIENTES (
     id_cliente INTEGER PRIMARY KEY AUTOINCREMENT,
     razon_social TEXT NOT NULL,
-    cuit TEXT NOT NULL UNIQUE,
+    cuit TEXT UNIQUE,
     tipo_factura TEXT NOT NULL CHECK (tipo_factura IN ('A','B','C','X')),
     email TEXT,
     telefono TEXT,
-    direccion TEXT
+    direccion TEXT,
+    localidad TEXT,
+    codigo_postal TEXT,
+    provincia TEXT,
+    activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (1,0))
 );
 
 CREATE TABLE PRESUPUESTO (
@@ -29,10 +33,18 @@ CREATE TABLE PRESUPUESTO (
     fecha_emision TEXT NOT NULL DEFAULT (date('now')),
     estado TEXT NOT NULL DEFAULT 'PRESUPUESTO' CHECK (estado IN ('PRESUPUESTO','RECHAZADO','ORDEN_TRABAJO','VENTA')),
     total REAL NOT NULL DEFAULT 0 CHECK (total >= 0),
-    fecha_cobro TEXT,
     facturar_arca INTEGER NOT NULL DEFAULT 0 CHECK (facturar_arca IN (1,0)),
     fecha_facturacion_arca TEXT,
     FOREIGN KEY (id_cliente) REFERENCES CLIENTES(id_cliente)
+);
+
+-- Cobros de una orden (puede haber varios: pagos parciales). Saldo = total del presupuesto - suma de pagos.
+CREATE TABLE PAGO (
+    id_pago INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_presupuesto INTEGER NOT NULL,
+    fecha TEXT NOT NULL,
+    monto REAL NOT NULL CHECK (monto > 0),
+    FOREIGN KEY (id_presupuesto) REFERENCES PRESUPUESTO(id_presupuesto)
 );
 
 CREATE TABLE PRODUCTOSxPRESUPUESTOS (

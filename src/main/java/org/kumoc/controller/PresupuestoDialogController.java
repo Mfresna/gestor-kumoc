@@ -5,12 +5,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
 import org.kumoc.AppContext;
 import org.kumoc.exception.NegocioException;
 import org.kumoc.model.Cliente;
@@ -19,6 +21,7 @@ import org.kumoc.model.Presupuesto;
 import org.kumoc.model.Producto;
 import org.kumoc.ui.Dialogos;
 import org.kumoc.ui.Formato;
+import org.kumoc.ui.ModoFormulario;
 import org.kumoc.ui.Tablas;
 import org.kumoc.ui.Ventanas;
 
@@ -63,6 +66,17 @@ public class PresupuestoDialogController {
     private final ObservableList<Linea> lineas = FXCollections.observableArrayList();
     private Presupuesto existente;
     private Presupuesto guardado;
+    private boolean dadoDeBaja;
+    private ModoFormulario modo = ModoFormulario.NUEVO;
+
+    @FXML
+    private VBox panelItems;
+    @FXML
+    private Button btnNuevoCliente;
+    @FXML
+    private Button btnBaja;
+    @FXML
+    private Button btnPrincipal;
 
     @FXML
     private void initialize() {
@@ -94,26 +108,37 @@ public class PresupuestoDialogController {
     public void preparar(Presupuesto existente) {
 
         this.existente = existente;
-        cmbCliente.getItems().setAll(AppContext.get().clientes().listar());
+        cmbCliente.getItems().setAll(AppContext.get().clientes().listar(true));
         cmbProducto.getItems().setAll(AppContext.get().productos().listar(true));
 
         if (existente != null) {
+            // El cliente puede haber sido dado de baja despues de crear el presupuesto: se mantiene visible.
+            if (cmbCliente.getItems().stream().noneMatch(c -> c.idCliente().equals(existente.idCliente()))) {
+                AppContext.get().clientes().buscarPorId(existente.idCliente())
+                        .ifPresent(c -> cmbCliente.getItems().add(c));
+            }
             lblTitulo.setText("PRESUPUESTO N° " + existente.idPresupuesto());
 
             Map<Integer, Producto> porId = new HashMap<>();
             AppContext.get().productos().listar(false).forEach(p -> porId.put(p.idProducto(), p));
 
             cmbCliente.getItems().stream()
-                    .filter(c -> c.idCliente() == existente.idCliente())
+                    .filter(c -> c.idCliente().equals(existente.idCliente()))
                     .findFirst()
                     .ifPresent(cmbCliente::setValue);
             existente.items().forEach(i -> lineas.add(new Linea(porId.get(i.idProducto()), i.cantidad(), i.precioUnitario())));
         }
+        aplicarModo(existente == null ? ModoFormulario.NUEVO : ModoFormulario.VISTA);
     }
 
     /** Presupuesto guardado, o null si el usuario cancelo. */
     public Presupuesto guardado() {
         return guardado;
+    }
+
+    /** true si el usuario dio de baja (elimino) el presupuesto desde este dialogo. */
+    public boolean dadoDeBaja() {
+        return dadoDeBaja;
     }
 
     @FXML
@@ -162,7 +187,66 @@ public class PresupuestoDialogController {
         }
     }
 
+    /** NUEVO/EDICION guardan; VISTA habilita la edicion. */
     @FXML
+    private void accionPrincipal() {
+
+        if (modo == ModoFormulario.VISTA) {
+            aplicarModo(ModoFormulario.EDICION);
+        } else {
+            guardar();
+        }
+    }
+
+    @FXML
+    private void nuevoCliente() {
+
+        Dialogos.ejecutar(() -> {
+            ClienteDialogController dialogo = Ventanas.mostrarModal("ClienteDialog.fxml", "Nuevo cliente",
+                    cmbCliente.getScene().getWindow(), (ClienteDialogController c) -> { });
+
+            Cliente nuevo = dialogo.guardado();
+            if (nuevo != null) {
+                cmbCliente.getItems().setAll(AppContext.get().clientes().listar(true));
+                cmbCliente.getItems().stream()
+                        .filter(c -> c.idCliente().equals(nuevo.idCliente()))
+                        .findFirst()
+                        .ifPresent(cmbCliente::setValue);
+            }
+        });
+    }
+
+    @FXML
+    private void darDeBaja() {
+
+        if (existente == null) {
+            return;
+        }
+
+        Dialogos.ejecutar(() -> {
+            if (!Dialogos.confirmar("Dar de baja",
+                    "¿Dar de baja el presupuesto N° " + existente.idPresupuesto()
+                            + "? Se eliminará y no se puede deshacer.")) {
+                return;
+            }
+            AppContext.get().presupuestos().eliminar(existente.idPresupuesto());
+            dadoDeBaja = true;
+            guardado = null;
+            Ventanas.cerrar(lblTotal);
+        });
+    }
+
+    private void aplicarModo(ModoFormulario nuevoModo) {
+
+        modo = nuevoModo;
+        btnPrincipal.setText(modo.textoBoton());
+        boolean editable = modo.camposEditables();
+        cmbCliente.setDisable(!editable);
+        btnNuevoCliente.setDisable(!editable);
+        panelItems.setDisable(!editable);
+        btnBaja.setDisable(existente == null);
+    }
+
     private void guardar() {
 
         Dialogos.ejecutar(() -> {
@@ -206,7 +290,8 @@ public class PresupuestoDialogController {
             @Override
             protected void updateItem(Cliente c, boolean vacio) {
                 super.updateItem(c, vacio);
-                setText(vacio || c == null ? null : c.razonSocial() + " – " + c.cuit());
+                setText(vacio || c == null ? null
+                        : c.cuit() == null ? c.razonSocial() : c.razonSocial() + " – " + c.cuit());
             }
         };
     }

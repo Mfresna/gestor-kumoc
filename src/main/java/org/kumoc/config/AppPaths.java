@@ -25,6 +25,12 @@ public class AppPaths {
         return getAppFolder().resolve("kumoc.db");
     }
 
+    /** Datos del negocio (contacto e informacion de pago) que se imprimen en el pie de los PDF. */
+    public static Path getBusinessDataPath() {
+
+        return getAppFolder().resolve("negocio.properties");
+    }
+
     public static Path getImagesFolder() {
 
         return getAppFolder().resolve("imagenes");

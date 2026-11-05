@@ -31,7 +31,9 @@
             <TableView fx:id="tabla" VBox.vgrow="ALWAYS">
                 <columns>
                     <TableColumn fx:id="colCodigo" text="CÓDIGO" prefWidth="90"/>
-                    <TableColumn fx:id="colProducto" text="PRODUCTO" prefWidth="190"/>
+                    <TableColumn fx:id="colProducto" text="PRODUCTO" prefWidth="170"/>
+                    <TableColumn fx:id="colTalle" text="TALLE" prefWidth="70"/>
+                    <TableColumn fx:id="colColor" text="COLOR" prefWidth="100"/>
                     <TableColumn fx:id="colFisico" text="FÍSICO" prefWidth="75" style="-fx-alignment: CENTER-RIGHT;"/>
                     <TableColumn fx:id="colComprometido" text="CONGELADO" prefWidth="105"
                                  style="-fx-alignment: CENTER-RIGHT;"/>

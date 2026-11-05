@@ -72,6 +72,18 @@ public class MovimientoStockDao {
         return listar("WHERE id_presupuesto = ?", idPresupuesto);
     }
 
+    /** Borra los movimientos ligados a una orden (fabricacion y venta). Conviene llamarlo dentro de una transaccion. */
+    public void eliminarPorPresupuesto(int idPresupuesto) {
+
+        try (PreparedStatement ps = connection.prepareStatement(
+                "DELETE FROM MOVIMIENTO_STOCK WHERE id_presupuesto = ?")) {
+            ps.setInt(1, idPresupuesto);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new AccesoDatosException(e);
+        }
+    }
+
     public StockProducto obtenerStock(int idProducto) {
 
         try (PreparedStatement ps = connection.prepareStatement(SELECT_STOCK + "WHERE p.id_producto = ?")) {

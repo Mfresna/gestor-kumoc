@@ -21,10 +21,14 @@
 
     <VBox spacing="3">
         <Label text="CLIENTE *" styleClass="etiqueta-campo"/>
-        <ComboBox fx:id="cmbCliente" maxWidth="Infinity"/>
+        <HBox spacing="10">
+            <ComboBox fx:id="cmbCliente" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnNuevoCliente" text="+ Nuevo cliente" styleClass="boton-secundario"
+                    onAction="#nuevoCliente"/>
+        </HBox>
     </VBox>
 
-    <VBox styleClass="tarjeta" spacing="10">
+    <VBox fx:id="panelItems" styleClass="tarjeta" spacing="10">
         <Label text="AGREGAR PRODUCTO" styleClass="subtitulo"/>
         <HBox spacing="10" alignment="BOTTOM_LEFT">
             <VBox spacing="3" HBox.hgrow="ALWAYS">
@@ -62,6 +66,8 @@
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button text="Cancelar" styleClass="boton-secundario" cancelButton="true" onAction="#cancelar"/>
-        <Button text="Guardar presupuesto" styleClass="boton-primario" onAction="#guardar"/>
+        <Button fx:id="btnBaja" text="DAR DE BAJA" styleClass="boton-secundario" onAction="#darDeBaja"/>
+        <Button fx:id="btnPrincipal" text="GUARDAR NUEVO" styleClass="boton-primario"
+                onAction="#accionPrincipal"/>
     </HBox>
 </VBox>

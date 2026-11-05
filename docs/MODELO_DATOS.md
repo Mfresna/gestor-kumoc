@@ -1,6 +1,6 @@
 # MODELO DE DATOS – KUMOC
 
-Motor: SQLite. Cinco entidades principales. El esquema vigente está en `src/main/resources/db/schema.sql` (tablas) y `db/indexes.sql` (índices). Solo se crea si la base no existe; un cambio de esquema exige borrar `%APPDATA%\Kumoc\kumoc.db` (o migrar).
+Motor: SQLite. Seis tablas (cinco entidades principales y `PAGO`). El esquema vigente está en `src/main/resources/db/schema.sql` (tablas) y `db/indexes.sql` (índices). Solo se crea si la base no existe; un cambio de esquema exige borrar `%APPDATA%\Kumoc\kumoc.db` (o migrar).
 
 ## CLIENTES
 Clientes a los que se presupuesta y vende, con información mínima.
@@ -9,10 +9,12 @@ Clientes a los que se presupuesta y vende, con información mínima.
 |---|---|---|
 | id_cliente | INTEGER PK | autoincremental |
 | razon_social | TEXT NOT NULL | nombre |
-| cuit | TEXT NOT NULL UNIQUE | CUIT/CUIL |
+| cuit | TEXT UNIQUE | CUIT/CUIL, opcional (NULL si no se informa; varios clientes pueden no tenerlo) |
 | tipo_factura | TEXT NOT NULL | `A`, `B`, `C`, `X` |
 | telefono | TEXT | contacto |
 | email, direccion | TEXT | opcionales |
+| localidad, codigo_postal, provincia | TEXT | opcionales (texto libre; el CP no se valida por los distintos formatos) |
+| activo | INTEGER 1/0 | baja lógica |
 
 ## PRODUCTOS
 Productos vendibles (chalecos, camperas, buzos, etc.).
@@ -20,7 +22,7 @@ Productos vendibles (chalecos, camperas, buzos, etc.).
 | Campo | Tipo | Notas |
 |---|---|---|
 | id_producto | INTEGER PK | |
-| codigo | TEXT NOT NULL UNIQUE | |
+| codigo | TEXT UNIQUE | opcional (NULL si no se informa; si se informa es único) |
 | nombre | TEXT NOT NULL | |
 | descripcion | TEXT | |
 | talle, color | TEXT | |
@@ -43,11 +45,22 @@ Cabecera del documento. Cubre todo el ciclo mediante `estado`.
 | fecha_emision | TEXT | |
 | total | REAL ≥ 0 | suma de subtotales |
 | estado | TEXT | `PRESUPUESTO`, `RECHAZADO`, `ORDEN_TRABAJO`, `VENTA` |
-| fecha_cobro | TEXT | NULL = pendiente de pago; se completa al registrar el pago |
-| facturar_arca | INTEGER 1/0 | se define al registrar el pago |
+| facturar_arca | INTEGER 1/0 | se define al registrar el pago que salda la orden |
 | fecha_facturacion_arca | TEXT | NULL = pendiente de facturar en ARCA |
 
-El pago y la facturación son ejes independientes del `estado`.
+El pago y la facturación son ejes independientes del `estado`. El cobro se deriva de `PAGO` (ver abajo).
+
+## PAGO
+Cobros de una orden; puede haber varios (pagos parciales).
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id_pago | INTEGER PK | |
+| id_presupuesto | INTEGER FK → PRESUPUESTO | |
+| fecha | TEXT NOT NULL | fecha del cobro |
+| monto | REAL NOT NULL > 0 | |
+
+`pagado = Σ monto`; `saldo = total − pagado`. La orden está cobrada cuando `saldo = 0`; la fecha de cobro es la del último pago. No se guarda saldo ni estado de cobro: se calculan.
 
 ## PRODUCTOSxPRESUPUESTOS
 Detalle de ítems de cada presupuesto.
@@ -76,6 +89,7 @@ Histórico inmutable de eventos de inventario.
 
 ## Relaciones
 - CLIENTES 1 — N PRESUPUESTO
+- PRESUPUESTO 1 — N PAGO
 - PRESUPUESTO 1 — N PRODUCTOSxPRESUPUESTOS N — 1 PRODUCTOS
 - PRODUCTOS 1 — N MOVIMIENTO_STOCK
 

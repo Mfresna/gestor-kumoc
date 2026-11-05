@@ -50,6 +50,10 @@ public class StockController implements Seccion {
     @FXML
     private TableColumn<FilaStock, String> colProducto;
     @FXML
+    private TableColumn<FilaStock, String> colTalle;
+    @FXML
+    private TableColumn<FilaStock, String> colColor;
+    @FXML
     private TableColumn<FilaStock, String> colFisico;
     @FXML
     private TableColumn<FilaStock, String> colComprometido;
@@ -81,8 +85,10 @@ public class StockController implements Seccion {
     @FXML
     private void initialize() {
 
-        colCodigo.setCellValueFactory(c -> new ReadOnlyStringWrapper(c.getValue().producto().codigo()));
-        colProducto.setCellValueFactory(c -> new ReadOnlyStringWrapper(nombreCompleto(c.getValue().producto())));
+        colCodigo.setCellValueFactory(c -> new ReadOnlyStringWrapper(vacio(c.getValue().producto().codigo())));
+        colProducto.setCellValueFactory(c -> new ReadOnlyStringWrapper(c.getValue().producto().nombre()));
+        colTalle.setCellValueFactory(c -> new ReadOnlyStringWrapper(vacio(c.getValue().producto().talle())));
+        colColor.setCellValueFactory(c -> new ReadOnlyStringWrapper(vacio(c.getValue().producto().color())));
         colFisico.setCellValueFactory(c -> new ReadOnlyStringWrapper(String.valueOf(c.getValue().stock().fisico())));
         colComprometido.setCellValueFactory(c -> new ReadOnlyStringWrapper(String.valueOf(c.getValue().stock().comprometido())));
         colDisponible.setCellValueFactory(c -> new ReadOnlyStringWrapper(String.valueOf(c.getValue().stock().disponible())));
@@ -218,13 +224,14 @@ public class StockController implements Seccion {
 
         String filtro = texto == null ? "" : texto.trim().toLowerCase(Locale.ROOT);
         filtradas.setPredicate(f -> filtro.isEmpty()
-                || f.producto().codigo().toLowerCase(Locale.ROOT).contains(filtro)
-                || nombreCompleto(f.producto()).toLowerCase(Locale.ROOT).contains(filtro)
-                || (f.producto().color() != null && f.producto().color().toLowerCase(Locale.ROOT).contains(filtro)));
+                || vacio(f.producto().codigo()).toLowerCase(Locale.ROOT).contains(filtro)
+                || f.producto().nombre().toLowerCase(Locale.ROOT).contains(filtro)
+                || vacio(f.producto().talle()).toLowerCase(Locale.ROOT).contains(filtro)
+                || vacio(f.producto().color()).toLowerCase(Locale.ROOT).contains(filtro));
     }
 
-    private static String nombreCompleto(Producto p) {
-        return p.talle() == null ? p.nombre() : p.nombre() + " (" + p.talle() + ")";
+    private static String vacio(String valor) {
+        return valor == null ? "" : valor;
     }
 
     private static String etiquetaTipo(TipoMovimiento tipo) {

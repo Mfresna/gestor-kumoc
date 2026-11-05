@@ -58,6 +58,8 @@
                     maxWidth="Infinity" onAction="#aprobar"/>
             <Button fx:id="btnRechazar" text="Rechazar" styleClass="boton-secundario" maxWidth="Infinity"
                     onAction="#rechazar"/>
+            <Button fx:id="btnImprimir" text="Imprimir PDF" styleClass="boton-secundario" maxWidth="Infinity"
+                    onAction="#imprimirPdf"/>
             <Button fx:id="btnEliminar" text="Eliminar" styleClass="boton-secundario" maxWidth="Infinity"
                     onAction="#eliminar"/>
         </VBox>
