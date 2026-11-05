@@ -23,7 +23,7 @@ public class App extends Application {
         escena.getStylesheets().add(App.class.getResource("/css/kumoc.css").toExternalForm());
 
         stage.setTitle("KUMOC");
-        stage.getIcons().add(new Image(App.class.getResourceAsStream("/img/logo.png")));
+        stage.getIcons().add(new Image(App.class.getResourceAsStream("/img/logo-cuadrado.png")));
         stage.setMinWidth(1000);
         stage.setMinHeight(620);
         stage.setScene(escena);
